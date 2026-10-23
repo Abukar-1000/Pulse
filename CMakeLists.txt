@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
-
+set(PICO_BOARD pico_w)
+include_directories(include)
 include(pico_sdk_import.cmake)
 
 project(pico_blink VERSION 0.1.0 LANGUAGES C CXX ASM)
@@ -23,7 +24,25 @@ add_executable(
     src/Pins/PinContextSingleton.cpp
     src/Animations/ConnectedToWifi.cpp
     include/Animations/IAnimation.h
+    include/Connections/TCP/Server.h
+    include/Connections/IConnection.h
+    src/Connections/TCP/Server.cpp
+    include/Connections/TCP/Resources/PCBDeleter.h
+    include/lwipopts.h
+    include/Animations/Definitions/Percise.h
+    src/Animations/Definitions/Percise.cpp
+    include/Animations/Parsing/Parser.h
+    include/Animations/AnimationContext.h
+    src/Animations/AnimationContext.cpp
 )
 
-target_link_libraries(pico_blink pico_stdlib hardware_pwm pico_cyw43_arch_none)
+target_link_libraries(
+    pico_blink 
+    pico_stdlib 
+    hardware_pwm 
+    pico_cyw43_arch_lwip_threadsafe_background
+    pico_multicore
+    pico_cyw43_arch_none
+)
+
 pico_add_extra_outputs(pico_blink)

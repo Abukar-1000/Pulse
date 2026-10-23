@@ -3,10 +3,7 @@
 namespace Animations
 {
     ConnectedToWifi::ConnectedToWifi(void)
-    {
-        auto context = PinContextSingleton::Get();
-        context->SetAllPinsOff();
-    }
+    {}
 
     void ConnectedToWifi::Run(void)
     {

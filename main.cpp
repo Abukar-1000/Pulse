@@ -4,6 +4,8 @@
 #include "pico/cyw43_arch.h"
 #include "./include/Pins/PinContextSingleton.h"
 #include "./include/Animations/ConnectedToWifi.h"
+#include "./include/Connections/TCP/Server.h"
+#include "pico/multicore.h"
 
 #define SET_ON 1
 #define SET_OFF 0
@@ -18,6 +20,17 @@
 
 #define FULL_BRIGHTNESS 65535
 #define MIN_BRIGHTNESS 0
+
+void startServer(void)
+{
+    auto server = std::make_unique<Connections::TCP::Server>();
+    server->Start();
+
+    while (server->IsListening())
+    {
+        sleep_ms(100);
+    }
+}
 
 void setup()
 {
@@ -69,17 +82,18 @@ void fadeAll(uint16_t& brightness, bool& increasing)
 int main()
 {
     setup();
+    multicore_launch_core1(startServer);
+    sleep_ms(200);
+
     bool increasing = true;
     uint16_t brightness = MIN_BRIGHTNESS;
-    Animations::ConnectedToWifi animation;
     while (1)
     {
         cyw43_arch_gpio_put(on_board_led_pin, SET_ON);
         sleep_ms(50);
         cyw43_arch_gpio_put(on_board_led_pin, SET_OFF);
-        // fadeAll(brightness, increasing);
+        fadeAll(brightness, increasing);
         sleep_ms(30);
-        animation.Run();
     }
 
     return 0;

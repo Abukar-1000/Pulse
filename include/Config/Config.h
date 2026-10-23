@@ -4,6 +4,10 @@
 #include "Secrets.h"
 #include "pico/stdlib.h"
 
+/*
+    Local IP address: 10.0.0.159
+*/
+
 class Config
 {
     public:
