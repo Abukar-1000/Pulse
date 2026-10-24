@@ -6,6 +6,8 @@
 #include "pico/cyw43_arch.h"
 #include "./Resources/PCBDeleter.h"
 #include "../../Animations/ConnectedToWifi.h"
+#include "../../Animations/FailedToConnect.h"
+#include "../../Animations/RequestReceived.h"
 #include "../../Config/Config.h"
 
 namespace Connections::TCP
@@ -15,7 +17,9 @@ namespace Connections::TCP
         private:
             uint16_t port;
             std::unique_ptr<struct tcp_pcb, PCBDeleter> pcb;
+            Animations::RequestReceived recAnimation;
             bool isListening;
+            bool hasActiveRequests;
             static void OnError(void *arg, err_t err);
             static err_t OnAccept(void *arg, struct tcp_pcb *client_pcb, err_t err);
             static err_t OnReceive(void *arg, struct tcp_pcb *client_pcb, struct pbuf *p, err_t err);
@@ -23,6 +27,9 @@ namespace Connections::TCP
             void Error(err_t err);
             err_t Accept(struct tcp_pcb *client_pcb, err_t err);
             err_t Receive(struct tcp_pcb *client_pcb, struct pbuf *p, err_t err);
+            bool ConnectedToWifi(void) noexcept;
+            void AttemptReconnectToWifi(uint16_t maxAttempts = 0, bool infinite = false) noexcept;
+            bool SendResponse(const std::string& response, struct tcp_pcb *client_pcb) noexcept;
         public:
             ~Server();
             Server(void);
@@ -30,6 +37,7 @@ namespace Connections::TCP
             virtual void Stop(void) override;
             bool IsListening(void) const noexcept;
             bool IsConnected(void) const noexcept;
+            void ProcessActiveEvents(void) noexcept;
     };
 }
 #endif

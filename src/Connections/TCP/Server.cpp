@@ -57,16 +57,29 @@ namespace Connections::TCP
 
         if (err == ERR_OK && p != nullptr && p->tot_len > 0)
         {
+            uint16_t totalLen = p->tot_len;
             std::string receivedData;
             receivedData.reserve(p->tot_len);
-            while (p != nullptr)
+
+            struct pbuf* q = p; 
+            while (q != nullptr)
             {
                 // Process the received data here
-                receivedData.append(static_cast<char*>(p->payload), p->len);
-                p = p->next;
+                receivedData.append(static_cast<char*>(q->payload), q->len);
+                q = q->next;
             }
 
-            tcp_recved(client_pcb, p->tot_len);
+            tcp_recved(client_pcb, totalLen);
+            this->hasActiveRequests = true;
+            this->SendResponse("Acknowledged Request: " + receivedData, client_pcb);
+
+            tcp_arg(client_pcb, nullptr);
+            tcp_recv(client_pcb, nullptr);
+            
+            err_t closeErr = tcp_close(client_pcb);
+            if (closeErr != ERR_OK) {
+                tcp_abort(client_pcb);
+            }
         }
 
         Server::FreeBuffer(p);
@@ -101,6 +114,34 @@ namespace Connections::TCP
         }
     }
 
+    bool Server::SendResponse(const std::string& response, struct tcp_pcb *client_pcb) noexcept
+    {
+        cyw43_arch_lwip_begin();
+        uint16_t availableBufferSpace = tcp_sndbuf(client_pcb);
+        bool responseExceedsLimit = response.length() > availableBufferSpace;
+        std::string msg = (
+            responseExceedsLimit? 
+                response.substr(0, availableBufferSpace)
+            :
+                response
+        ); 
+
+        err_t writeErr = tcp_write(
+            client_pcb, 
+            msg.c_str(), 
+            msg.length(), 
+            TCP_WRITE_FLAG_COPY
+        );
+
+        if (writeErr == ERR_OK)
+        {
+            tcp_output(client_pcb);
+        }
+        
+        cyw43_arch_lwip_end();
+        return (writeErr == ERR_OK); 
+    }
+
     bool Server::IsListening(void) const noexcept
     {
         return this->pcb != nullptr && this->isListening;
@@ -115,18 +156,24 @@ namespace Connections::TCP
     }
 
     Server::Server()
-    :   port(4242),
+    :   port(8080),
         pcb(nullptr),
-        isListening(false)
-    {
-        this->Start();
-    }
-    
-    void Server::Start(void)
-    {
-        Config config;
-        cyw43_arch_enable_sta_mode();
+        isListening(false),
+        hasActiveRequests(false),
+        recAnimation(Animations::RequestReceived(10))
+    {}
 
+    void Server::ProcessActiveEvents(void) noexcept
+    {
+        if (this->hasActiveRequests)
+        {
+            this->hasActiveRequests = false;
+            this->recAnimation.Run();
+        }
+    }
+
+    bool Server::ConnectedToWifi(void) noexcept
+    {
         if(cyw43_arch_wifi_connect_timeout_ms(
             Config::WIFI_SSID.c_str(),
             Config::WIFI_PASSWORD.c_str(),
@@ -135,25 +182,72 @@ namespace Connections::TCP
         ))
         {
             // failed to connect to wifi
-            return;
+            Animations::FailedToConnect animation;
+            animation.Run();
+            this->isListening = false;
+            return false;
         }
 
         Animations::ConnectedToWifi animation;
         animation.Run();
-        
-        cyw43_thread_enter();
+        return true;
+    }
+
+    void Server::AttemptReconnectToWifi(uint16_t maxAttempts, bool infinite) noexcept
+    {
+        uint16_t delay = 10;
+        bool connected = false;
+        if (infinite)
+        {
+            while(!connected)
+            {
+                connected = this->ConnectedToWifi();
+                sleep_ms(delay);
+            }
+            return;
+        }
+
+        uint16_t count = 0;
+        while (!connected && count < maxAttempts)
+        {
+            connected = this->ConnectedToWifi();
+            count++;
+            sleep_ms(delay);
+        }
+    }
+    
+    void Server::Start(void)
+    {
+        Config config;
+        cyw43_arch_enable_sta_mode();
+        this->AttemptReconnectToWifi(0, true);
+
+        cyw43_arch_lwip_begin();
         struct tcp_pcb* rawPcbPtr = tcp_new_ip_type(IPADDR_TYPE_ANY);
         if (rawPcbPtr == nullptr)
         {
             // failed to create new TCP PCB
-            cyw43_thread_exit();
+            cyw43_arch_lwip_end();
             return;
         }
 
-        this->pcb = std::unique_ptr<struct tcp_pcb, PCBDeleter>(rawPcbPtr, PCBDeleter());
-        tcp_bind(this->pcb.get(), IP_ANY_TYPE, this->port);
-        tcp_listen_with_backlog(this->pcb.get(), 1);
+        
+        err_t bindErr = tcp_bind(rawPcbPtr, IP_ANY_TYPE, this->port);
+        if (bindErr != ERR_OK) {
+            // failed to bind
+            tcp_abort(rawPcbPtr);
+            cyw43_arch_lwip_end();
+            return;
+        }
 
+        struct tcp_pcb* listeningPcbPtr = tcp_listen_with_backlog(rawPcbPtr, 1);
+        if (listeningPcbPtr == nullptr) {
+            // failed to listen
+            cyw43_arch_lwip_end();
+            return;
+        }
+        
+        this->pcb = std::unique_ptr<struct tcp_pcb, PCBDeleter>(listeningPcbPtr, PCBDeleter());
         if (this->pcb != nullptr)
         {
             this->isListening = true;
@@ -161,7 +255,7 @@ namespace Connections::TCP
 
         tcp_arg(this->pcb.get(), this);
         tcp_accept(this->pcb.get(), Server::OnAccept);
-        cyw43_thread_exit();
+        cyw43_arch_lwip_end();
     }
 
     void Server::Stop(void)
@@ -191,7 +285,5 @@ namespace Connections::TCP
     }
 
     Server::~Server()
-    {
-        this->Stop();
-    }
+    {}
 }

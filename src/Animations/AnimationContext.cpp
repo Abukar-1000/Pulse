@@ -22,7 +22,7 @@ namespace Animations
         }
 
         this->sequences.reserve(count);
-        this->Parse();
+        this->Parse(data);
     }
 
     void AnimationContext::Parse(const std::string& data)
@@ -32,40 +32,40 @@ namespace Animations
         uint16_t right = 1;
         uint8_t length = static_cast<uint8_t>(data.length()) - 1;
 
-        while (right < length)
-        {
-            if (data[right] == "{" || data[right] == "}")
-            {
-                this->braceIndexes.push_back(right);
-            }
-            right++;
-        }
+        // while (right < length)
+        // {
+        //     if (data[right] == "{" || data[right] == "}")
+        //     {
+        //         this->braceIndexes.push_back(right);
+        //     }
+        //     right++;
+        // }
 
-        if (this->braceIndexes.size() % 2 != 0)
-        {
-            // handle unballanced braces
-            return;
-        }
+        // if (this->braceIndexes.size() % 2 != 0)
+        // {
+        //     // handle unballanced braces
+        //     return;
+        // }
 
-        left = 1;
-        right = static_cast<uint16_t>(this->braceIndexes.size()) - 2;
-        while (left < right)
-        {
-            std::string window = data.substr(left, (right - left) + 1);
-            this->sequences.push_back(window);
-            left++;
-            right--;
-        }
+        // left = 1;
+        // right = static_cast<uint16_t>(this->braceIndexes.size()) - 2;
+        // while (left < right)
+        // {
+        //     std::string window = data.substr(left, (right - left) + 1);
+        //     this->sequences.push_back(window);
+        //     left++;
+        //     right--;
+        // }
 
-        if (this->sequences.size() >  0)
-        {
-            this->pDefinitions.reserve(this->sequences.size())
-        }
+        // if (this->sequences.size() >  0)
+        // {
+        //     this->pDefinitions.reserve(this->sequences.size());
+        // }
 
-        for (uint16_t index = 0; index < this->sequences.size(); ++index)
-        {
-            this->pDefinitions.push_back(Animations::Definitions::Percise(this->sequences[index]));
-        }
+        // for (uint16_t index = 0; index < this->sequences.size(); ++index)
+        // {
+        //     this->pDefinitions.push_back(Animations::Definitions::Percise(this->sequences[index]));
+        // }
     }
 
     void SetType(const std::string& data)
@@ -80,38 +80,38 @@ namespace Animations
         bool isFirstBrace = false;
         std::string num = "";
 
-        while (right < length)
-        {
-            if (data[right] == '{')
-            {
-                if (!isFirstBrace)
-                {
-                    isFirstBrace = true;
-                    right++;
-                    continue;
-                }
+        // while (right < length)
+        // {
+        //     if (data[right] == '{')
+        //     {
+        //         if (!isFirstBrace)
+        //         {
+        //             isFirstBrace = true;
+        //             right++;
+        //             continue;
+        //         }
 
-                break;
-            }
+        //         break;
+        //     }
 
-            if (data[right] == " " && num.length() > 0)
-            {
-                break;
-            }
+        //     if (data[right] == " " && num.length() > 0)
+        //     {
+        //         break;
+        //     }
 
-            curAsciiVal = static_cast<uint8_t>(data[right]);
-            if (curAsciiVal >= asciiZero  && curAsciiVal <= asciiNine)
-            {
-                num += data[right];
-            }
+        //     curAsciiVal = static_cast<uint8_t>(data[right]);
+        //     if (curAsciiVal >= asciiZero  && curAsciiVal <= asciiNine)
+        //     {
+        //         num += data[right];
+        //     }
 
-            right++;
-        }
+        //     right++;
+        // }
 
-        if (num.length() > 0)
-        {
-            this->type = static_cast<uint8_t>(num);
-        }
+        // if (num.length() > 0)
+        // {
+        //     this->type = static_cast<uint8_t>(num);
+        // }
     }
 
     std::vector<Definitions::Percise> AnimationContext::GetPerciseDefinitions(void)

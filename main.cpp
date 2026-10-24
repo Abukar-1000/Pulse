@@ -4,6 +4,7 @@
 #include "pico/cyw43_arch.h"
 #include "./include/Pins/PinContextSingleton.h"
 #include "./include/Animations/ConnectedToWifi.h"
+#include "./include/Animations/RequestReceived.h"
 #include "./include/Connections/TCP/Server.h"
 #include "pico/multicore.h"
 
@@ -23,19 +24,23 @@
 
 void startServer(void)
 {
+    cyw43_arch_init();
+    Animations::RequestReceived animation(5);
     auto server = std::make_unique<Connections::TCP::Server>();
     server->Start();
 
     while (server->IsListening())
     {
-        sleep_ms(100);
+        cyw43_arch_poll(); 
+        server->ProcessActiveEvents();
     }
+
+    server->Stop();
 }
 
 void setup()
 {
     stdio_init_all();
-    cyw43_arch_init();
     auto context = PinContextSingleton::Get();
     context->Get(LED_1)->TrySet(0, 2.0f);
     context->Get(LED_2)->TrySet(0, 2.0f);
@@ -47,12 +52,13 @@ void setup()
 
 void fadeAll(uint16_t& brightness, bool& increasing)
 {
-    const uint16_t increment = 20000;
-    auto context = PinContextSingleton::Get();
+    const uint16_t increment = 100;
+    auto context = PinContextSingleton::Get()->WithLock();
     for(uint8_t id = LED_1; id <= LED_6; ++id)
     {
         context->Get(id)->TrySet(brightness, 2.0f);
     }
+    context->ReleaseLock();
     
     if (increasing)
     {

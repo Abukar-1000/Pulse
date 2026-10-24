@@ -6,6 +6,8 @@ namespace Animations
 {
     class ConnectedToWifi: public IAnimation
     {
+        private:
+            void TurnOffLLeds(void) noexcept;
         public:
             ~ConnectedToWifi(void);
             ConnectedToWifi(void);

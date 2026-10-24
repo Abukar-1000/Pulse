@@ -33,6 +33,19 @@ void PinContext::SetAllPinsOff(void)
     }
 }
 
+PinContext* PinContext::WithLock(bool cruicial) noexcept
+{
+    Locks::Mutex::MutexLockSingleton::Get()->WaitAndLock();
+    return this;
+}
+
+PinContext* PinContext::ReleaseLock(void) noexcept
+{
+    // Sleep is intended to give a chance to other waiting cores
+    Locks::Mutex::MutexLockSingleton::Get()->Unlock();
+    return this;
+}
+
 const size_t PinContext::Size(void) noexcept
 {
     return this->Pins.size();

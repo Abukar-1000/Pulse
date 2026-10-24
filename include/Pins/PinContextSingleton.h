@@ -6,7 +6,8 @@ class PinContextSingleton
 {
     private:
         static std::shared_ptr<PinContext> instance;
-        PinContextSingleton() {}
+        static void Init(void) noexcept;
+        PinContextSingleton(void) {}
     public:
         static std::shared_ptr<PinContext> Get(void);
 };

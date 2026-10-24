@@ -1,8 +1,9 @@
 #ifndef PinContext_h
 #define PinContext_h
-#include "Pin.h"
+#include "./Pin.h"
 #include <memory>
 #include <vector>
+#include "../Locks/MutexLockSingleton.h"
 
 class PinContext
 {
@@ -16,6 +17,8 @@ class PinContext
         void SetAllPinsOff(void);
         const size_t Size(void) noexcept;
         const std::shared_ptr<Pin> Get(const uint8_t id);
+        PinContext* WithLock(bool cruicial = false) noexcept;
+        PinContext* ReleaseLock(void) noexcept;
 };
 
 #endif

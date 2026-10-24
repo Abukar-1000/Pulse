@@ -13,7 +13,8 @@ namespace Animations
         const uint8_t GreenLedPin = 2;
         const uint8_t MaxLedPin = 12;
         
-        auto context = PinContextSingleton::Get();
+        auto context = PinContextSingleton::Get()->WithLock(true);
+        this->TurnOffLLeds();
         context->Get(GreenLedPin)->TrySet(0, 2.0f);
         for (uint8_t i = 0; i <= iterations; ++i)
         {
@@ -42,6 +43,15 @@ namespace Animations
             sleep_ms(50);
         }
 
+        this->TurnOffLLeds();
+        context->ReleaseLock();
+    }
+
+    void ConnectedToWifi::TurnOffLLeds(void) noexcept
+    {
+        // Assume lock has been aquired before calling
+        const uint8_t MaxLedPin = 12;
+        auto context = PinContextSingleton::Get();
         for (uint8_t i = 0; i <= MaxLedPin; ++i)
         {
             bool isValidLedPin = (

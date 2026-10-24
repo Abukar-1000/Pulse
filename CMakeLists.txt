@@ -34,11 +34,20 @@ add_executable(
     include/Animations/Parsing/Parser.h
     include/Animations/AnimationContext.h
     src/Animations/AnimationContext.cpp
+    include/Locks/MutexLock.h
+    src/Locks/MutexLock.cpp
+    include/Locks/MutexLockSingleton.h
+    src/Locks/MutexLockSingleton.cpp
+    include/Animations/FailedToConnect.h
+    src/Animations/FailedToConnect.cpp
+    include/Animations/RequestReceived.h
+    src/Animations/RequestReceived.cpp
 )
 
 target_link_libraries(
     pico_blink 
     pico_stdlib 
+    pico_sync
     hardware_pwm 
     pico_cyw43_arch_lwip_threadsafe_background
     pico_multicore
